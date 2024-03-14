@@ -1,0 +1,99 @@
+custom_imports = dict(imports=['model.encoders', 'model.decoders'], allow_failed_imports=False)
+
+img_size = 512
+encoder_only=False
+use_gan = True
+num_group = 256
+face_finetune = True
+
+model = dict(
+    g_model = dict(
+        encoder_only = encoder_only,
+        encoder = dict(
+            type = 'ReaderEncoder',
+            encoder_only = encoder_only,
+            face_finetune = True,
+            backbone = dict(
+                img_size = img_size, 
+                patch_size = 8, 
+                embed_dim = 192, 
+                depth = 12, 
+                num_heads = 3),
+            mask_decoder=dict(
+                input_dim = 192,
+                embed_dim = 256, 
+                depth = 6, 
+                num_heads = 8,
+                num_queries = num_group,
+                get_internm = False,
+                assign_merge=True,
+                use_mlp_mix=False,
+                rgb_cfg = dict(
+                    img_size = 256,
+                    patch_size = 4,
+                    embed_dim = 48)),
+            mask_embed = dict(
+                img_size = img_size, 
+                patch_size = 4, 
+                mask_size = 64,
+                add_downsample = True, 
+                rgb_dim = 48)),
+        decoder = dict(
+            type = 'ReaderDecoder',
+            patch_size = 8,
+            transformer = dict(
+                latent_dim = 256,
+                embed_dim = 192, 
+                depth = 12, 
+                num_heads = 3,
+                num_queries = 4096),
+            lpips_loss = dict(
+                weight = 1.0,
+                ckpt='checkpoints/vgg/vgg_lpips.pth'),
+            l1_loss = dict(
+                weight = 2.0))),
+    d_model=dict(
+            discriminator = dict(
+                input_nc=3,
+                n_layers=3,
+                use_actnorm=False,
+                ndf=64),
+            disc_start=10,
+            warm_up_end=12,
+            # pretrained='checkpoints/discriminator/discriminator.pth',
+            normalize=False, # whether to convert reconstructions to VQGAN normalization
+            use_adaptive_weight=True,
+            weight=0.4,
+            factor=1.0,
+            freeze=False))
+
+data = dict(
+    train = dict(
+        img_root = 'path/to/CelebAMask-HQ/CelebA-HQ-img',
+        ann_root = 'path/to/CelebAMask-HQ/CelebAMask-HQ-mask-anno',
+        test_filelist = 'path/to/CelebAMask-HQ/test_files.txt',
+        pipeline_cfg = dict(img_size = img_size)),
+    train_loader = dict(
+        batch_size = 16, # 60 in total for 6 GPUs
+        num_workers = 4),
+    visual = dict(
+        visual_mode = True,
+        img_root = 'path/to/CelebAMask-HQ/CelebA-HQ-img',
+        ann_root = 'path/to/CelebAMask-HQ/CelebAMask-HQ-mask-anno',
+        test_filelist = 'path/to/CelebAMask-HQ/test_files.txt',
+        pipeline_cfg = dict(img_size = img_size),
+        img_ids = [2, 26, 93, 188, 300, 400, 500, 600]), # used for visualization
+    visual_loader = dict(
+        batch_size = 4, 
+        num_workers = 2))
+
+train_cfg = dict(
+    lr_cfg=dict(
+        warm_up_cfg = dict(epoch = 2),
+        type = 'default',
+        lr = 5e-5,
+        weight_decay = 0),
+    do_validate = False,
+    log_interval = 50,
+    save_interval = 1)
+

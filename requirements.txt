@@ -1,0 +1,12 @@
+# python 3.8.16
+# torch 1.12.1+cu113
+timm
+einops
+scipy
+addict
+yapf
+opencv-python
+tqdm
+tensorboardX
+tensorboard
+datasets
